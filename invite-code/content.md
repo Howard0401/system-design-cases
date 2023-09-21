@@ -42,7 +42,8 @@
      2: activated 6: deactivated 9: suspend',
     `created_at` int(11), 
     `updated_at` int(11), 
-    `integration_key` dedault '' COMMENT 'using as private key for ECDSA verification request between components',
+    `integration_priv_key` dedault '' COMMENT 'encrypted, using as private key for ECDH verification request between components',
+    `current_auth_admin` bigint(20) COMMENT 'a public key of users in admin table, and it can be updated by admin service, or random select an virtual admin user for update..'
      ...
  )
  
@@ -68,6 +69,17 @@
      2: activated 6: deactivated 8: suspend',
     `created_at` int(11), 
     `updated_at` int(11), 
+     ...
+ )
+
+  CREATE TABLE admin (
+     `id` bigint(20) PRIMARY KEY ,
+     `acoount`   varchar(30),
+     `password`  varchar(64),
+     `role` tinyint(1),
+     `state` tinyint(1),
+     `admin_pub_key` varchar(64) COMMENT 'ECDH for sign message of auth service, with AES(secret store in config/k8s secret/vault...etc ) encrypted',
+     `admin_pri_key` varchar(64) COMMENT 'ECDH for sign message of auth service, with AES encrypted',
      ...
  )
 ```
@@ -147,20 +159,24 @@
     - It's crucial to ensure message protection and verification for security.
 
 [![](https://mermaid.ink/img/pako:eNrNU8uSmzAQ_BWVLrkQjME8K-UqO7tfsLcUFxkNoApIRA9viMv_nhHGrmyyyTmcRM90q-ehC20UB1pRA98cyAaeBOs0G0ktrbADkIOzPWnVay2Zs0q68QS6lgQ_A_oMmhzIx_3-luYR0UCFB8mJ9orGkk8nvdkTq3wYPON44_9KeUcDzeh5ssQZIbtVhDx_fno5EDZ0Sgvbjyt8Ukh8RYAwPgpJGN5-izSDAGk_EEMmLc7MAvkK81-uX-s5rvZtD4sHtLCKIXUtY8kj5E0fjr-JcLj5X3wtAveGeTuoFdw704MMSAeWTGweFOOLf2eACGvWHCM6yazTECwusMZ7Lhq63_RPOz2K4jg1NCDO8JjOO5y3Y9AwKYle_uuZHR4rZ25u_9i5Qy1pQEfQIxMc1_3iBWuKvR-hphUeObTMDbamtbxiqt_2l1k2tLLaQUDdxNHK-jpo1bLBPNBnLqzSD9DPBfD3Qu08-bfVCWNRslGyFZ3HnR4Q7q2dTLXZ-HDYYSvcKWzUuDGC90zb_lxmmyzOChYnkOUJS5OEN6dtWbTxbtvyPNrGjF6vAZ2Y9KrfabXdJWGUF0WZRlGWpbsyCehMqzgJ8zhNy2JXFFEW5XGGrB9KYSFRWMZ5sk2iuMyzLCrifNH7sgR96defIxJZ9A?type=png)](https://mermaid.live/edit#pako:eNrNU8uSmzAQ_BWVLrkQjME8K-UqO7tfsLcUFxkNoApIRA9viMv_nhHGrmyyyTmcRM90q-ehC20UB1pRA98cyAaeBOs0G0ktrbADkIOzPWnVay2Zs0q68QS6lgQ_A_oMmhzIx_3-luYR0UCFB8mJ9orGkk8nvdkTq3wYPON44_9KeUcDzeh5ssQZIbtVhDx_fno5EDZ0Sgvbjyt8Ukh8RYAwPgpJGN5-izSDAGk_EEMmLc7MAvkK81-uX-s5rvZtD4sHtLCKIXUtY8kj5E0fjr-JcLj5X3wtAveGeTuoFdw704MMSAeWTGweFOOLf2eACGvWHCM6yazTECwusMZ7Lhq63_RPOz2K4jg1NCDO8JjOO5y3Y9AwKYle_uuZHR4rZ25u_9i5Qy1pQEfQIxMc1_3iBWuKvR-hphUeObTMDbamtbxiqt_2l1k2tLLaQUDdxNHK-jpo1bLBPNBnLqzSD9DPBfD3Qu08-bfVCWNRslGyFZ3HnR4Q7q2dTLXZ-HDYYSvcKWzUuDGC90zb_lxmmyzOChYnkOUJS5OEN6dtWbTxbtvyPNrGjF6vAZ2Y9KrfabXdJWGUF0WZRlGWpbsyCehMqzgJ8zhNy2JXFFEW5XGGrB9KYSFRWMZ5sk2iuMyzLCrifNH7sgR96defIxJZ9A)
-```sql=
+
+```sql
  CREATE TABLE admin (
      `id` bigint(20) PRIMARY KEY ,
      `acoount`   varchar(30),
      `password`  varchar(64),
      `role` tinyint(1),
      `state` tinyint(1),
-     `admin_key` varchar(64) COMMENT 'for sign message of auth service',
+     `admin_pub_key` varchar(64) COMMENT 'ECDH for sign message of auth service, with AES encrypted',
+     `admin_pri_key` varchar(64) COMMENT 'ECDH for sign message of auth service, with AES encrypted',
      ...
  )
 ```
+
 - ref1. https://cryptobook.nakov.com/digital-signatures/ecdsa-sign-verify-messages
 - ref2. https://github.com/EasonWang01/Introduction-to-cryptography/blob/master/3.3%20ECDSA.md
-- eg. https://gist.github.com/santhosh77h/4ad6f2dfcaad5e23997976c69d2aa7ac
+- ref3. https://gist.github.com/fmolliet/f542f9f2a89f112c54838ea4ccc2f3e9
+- ref4. https://gist.github.com/santhosh77h/4ad6f2dfcaad5e23997976c69d2aa7ac
 ---
 # Please design this system, document and **provide reasoning behind** each design decision (and options considered).
 

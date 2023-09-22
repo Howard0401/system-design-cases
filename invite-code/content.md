@@ -54,7 +54,7 @@
     `remain_times` int(11),
     `update_version` int(11) COMMENT 'optimistic locking for update with timestamp'
     `state` tinyint(1) COMMENT '0: init 1: processing authentication 
-     2: activated 6: deactivated 8: suspend',
+     2: activated 6: deactivated 8: suspend 9: exported by admin',
     `prcessing_activity_ids` varchar(30) COMMENT 'string list for activate ids',
     `created_at` int(11), 
     `updated_at` int(11), 
@@ -78,8 +78,7 @@
      `password`  varchar(64),
      `role` tinyint(1),
      `state` tinyint(1),
-     `admin_pub_key` varchar(64) COMMENT 'ECDH for sign message of auth service, with AES(secret store in config/k8s secret/vault...etc ) encrypted',
-     `admin_pri_key` varchar(64) COMMENT 'ECDH for sign message of auth service, with AES encrypted',
+     `admin_pri_key` varchar(64) COMMENT 'ECDH for sign message of auth service, with AES (secret store in config/k8s secret/vault...etc ) encrypted',
      ...
  )
 ```
@@ -194,6 +193,7 @@ Before diving into the specific solutions for invite codes, it's essential to ev
 
 ### API Gateway
 - Receives client requests.
+- Encrypt each API request using AES-256, incorporating the timestamp. 
 ### Login Service
 - Forwards the login request to the authentication service.
 - Sends back a JWT token upon successful authentication.
@@ -203,12 +203,13 @@ Before diving into the specific solutions for invite codes, it's essential to ev
 ### Auth Service
 - Every request must be signed for added security.
 - Provides authentication tokens, stored in Redis.
-- Token format: {USERID}:{FUNCTION}:{AUTH_TOKEN}:{AUTH_STATE} for multi-stage authentication.
+- eg. Token format: {USERID}:{FUNCTION}:{AUTH_TOKEN}:{AUTH_STATE} for multi-stage authentication.
 ### Mailing Service
 - Operates a worker pool to handle email requests from services such as the login and admin services.
 - Can leverage AWS SES or other third-party SMTP solutions.
 ### Admin Service
 - Especially for login authentication and config settings purposes.
+- Admins can distribute invite codes that have not been used
 ### Chain Service
 - Continuously polling data from the blockchain.
 - Potentially scalable based on user ID; ensures atomic operations.
@@ -298,15 +299,20 @@ Before diving into the specific solutions for invite codes, it's essential to ev
     `invitation_code_id` bigint(20),
     `invitation_code` varchar(10),
     `kind` tinyint(1) COMMENT '',
+    `created_at` int(11), 
+    `updated_at` int(11),
      ...
  )
  
   
   -- For api-gateway usage
   CREATE TABLE rate_limit ( 
-      `id` bigint(20) PRIMARY KEY ,
-      `route` varchar(20),
-      `limit_count` int(11),
+    `id` bigint(20) PRIMARY KEY ,
+    `route` varchar(20),
+    `limit_count` int(11),
+    `type` tinyint(1),
+    `created_at` int(11), 
+    `updated_at` int(11),
       ...
   )
  )
@@ -332,8 +338,10 @@ Before diving into the specific solutions for invite codes, it's essential to ev
 
 ## Backend
 ### API gateway
+- Load Balancer: ELB
 - Languages like Golang or Rust are suitable for handling heavy request loads.
 - Scalable across multiple API gateway pods.
+
 ### Behind gRPC or Restful API
 - Node.js: Enables rapid development.
 - Golang: Known for its efficient concurrency patterns.
@@ -343,8 +351,9 @@ Before diving into the specific solutions for invite codes, it's essential to ev
 
 ### Web development
 - Use an SSR (Server Side Rendering) frontend framework.
-- Implement encryption for credentials and cryptographic signatures.
+- Server implement encryption for credentials and cryptographic signatures.
 - Options: React (Next.js), Vue (Nuxt.js), or other server-based frameworks.
+- Use google recaptcha or other to handle abnormal requests
 
 ### Authentication app (optional)
 - Ability to communicate with hardware keys via Bluetooth, FIDO, and other protocols.
